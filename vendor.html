@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPIG Vendor Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/lib/msal-browser.min.js"></script>
+<style>
+:root{--navy:#17365d;--blue:#1f4e78;--blue2:#2e75b6;--bg:#f5f7fa;--card:#fff;--line:#dbe3ea;--text:#1c2733;--muted:#677685;--green:#2f7d32;--amber:#9a6700;--red:#b42318;--purple:#6941c6}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Segoe UI,sans-serif;font-size:14px}
+.topbar{height:58px;background:linear-gradient(90deg,var(--navy),var(--blue));color:#fff;display:flex;align-items:center;padding:0 18px;position:sticky;top:0;z-index:50}
+.brand{font-weight:700;font-size:18px;display:flex;align-items:center;gap:10px}.brand small{font-weight:500;opacity:.8;margin-left:4px}.topbar-logo{height:46px;display:flex;align-items:center}.topbar-logo img{height:46px;width:auto;object-fit:contain;filter:brightness(0) invert(1)}.spacer{flex:1}
+.btn{border:1px solid #cfd8e1;background:#fff;color:#253342;border-radius:7px;padding:8px 11px;font-weight:700;cursor:pointer;text-decoration:none}.btn:hover{background:#f7f9fb}.btn.primary{background:var(--blue2);border-color:var(--blue2);color:#fff}
+.wrap{max-width:1600px;margin:0 auto;padding:18px}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px;margin-bottom:14px}.card{background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 1px 3px rgba(16,24,40,.08)}
+.kpi{padding:14px}.kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}.kpi .value{font-size:27px;font-weight:700;margin-top:5px}.kpi .note{color:var(--muted);font-size:12px;margin-top:4px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px;margin-bottom:12px}.input,.select{border:1px solid #cfd8e1;background:#fff;border-radius:7px;padding:8px 9px;min-height:36px}.input{min-width:280px}.grow{flex:1}
+.grid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:14px}.side{padding:10px;max-height:calc(100vh - 185px);overflow:auto;position:sticky;top:76px}.loc{padding:9px;border-radius:7px;cursor:pointer;margin:2px 0}.loc:hover{background:#f0f5fa}.loc.on{background:#e7f0f8;color:#123f69;font-weight:700}.loc small{display:block;color:var(--muted);font-weight:400;margin-top:2px}
+.main{padding:14px}.head{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}.head h2{margin:0;font-size:22px}.subtitle{color:var(--muted);margin-top:3px}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px}table{width:100%;border-collapse:collapse;background:#fff}th{background:#f3f6f9;color:#5f6f7c;text-transform:uppercase;letter-spacing:.04em;font-size:10px;text-align:left;padding:9px;position:sticky;top:0;white-space:nowrap}td{padding:9px;border-top:1px solid #edf1f4;vertical-align:top}tr:hover td{background:#fafcfd}
+.tag{display:inline-block;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:700;white-space:nowrap}.current{background:#eaf4e6;color:var(--green)}.historical{background:#edf0f3;color:#58636e}.legacy{background:#fff4d6;color:var(--amber)}.recommended{background:#f0eafa;color:var(--purple)}.used{background:#e8f1fb;color:#245f92}.notused{background:#feeceb;color:var(--red)}
+.source{font-size:11px;color:var(--muted);margin-top:4px;max-width:520px}.note{font-size:12px;color:#465563;margin-top:5px}.empty{padding:30px;text-align:center;color:var(--muted)}
+.section-title{font-weight:700;font-size:14px;margin:16px 0 8px}.banner{background:#fff7df;border-left:4px solid #d99b00;padding:10px 12px;border-radius:6px;margin-bottom:12px;display:none}
+#loading{padding:45px;text-align:center;color:var(--muted)}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.side{position:static;max-height:220px}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><div class="topbar-logo"><img src="data:image/png;base64,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" alt="Service Pros"></div><span>Vendor Manager <small>Service Pros Installation Group</small></span></div>
+  <div class="spacer"></div>
+  <a class="btn" href="https://jrdoylespig.github.io/lease-manager/" target="_blank">Lease Manager</a>
+  <a class="btn" style="margin-left:7px" href="https://jrdoylespig.github.io/forklift-manager/Register.html" target="_blank">Forklift Manager</a>
+  <button class="btn primary" style="margin-left:7px" onclick="reloadAll()">Refresh</button>
+</div>
+<div class="wrap">
+  <div id="loading" class="card">Connecting to SharePoint…</div>
+  <div id="app" style="display:none">
+    <div class="kpis">
+      <div class="card kpi"><div class="label">Active Locations</div><div class="value" id="kLoc">—</div><div class="note">Lease Manager source</div></div>
+      <div class="card kpi"><div class="label">Vendors</div><div class="value" id="kVend">—</div><div class="note">Vendor Master</div></div>
+      <div class="card kpi"><div class="label">Current Assignments</div><div class="value" id="kCur">—</div><div class="note">Source-backed/current</div></div>
+      <div class="card kpi"><div class="label">Historical / Legacy</div><div class="value" id="kHist">—</div><div class="note">Used/history retained</div></div>
+      <div class="card kpi"><div class="label">Recommendations</div><div class="value" id="kRec">—</div><div class="note">Not yet used by SP</div></div>
+    </div>
+
+    <div class="card toolbar">
+      <input class="input" id="search" placeholder="Search vendor, location, category, phone…" oninput="render()">
+      <select class="select" id="catFilter" onchange="render()"><option value="">All categories</option></select>
+      <select class="select" id="statusFilter" onchange="render()">
+        <option value="">All statuses</option><option>Current</option><option>Recommended</option>
+        <option>Historical</option><option>Legacy / Needs Verification</option>
+      </select>
+      <div class="grow"></div>
+      <button class="btn" onclick="selectLocation('')">All Locations</button>
+    </div>
+
+    <div id="recBanner" class="banner"><b>Recommended vendor shown.</b> These records are researched options and are explicitly marked <b>Not Yet Used by Service Pros</b>.</div>
+
+    <div class="grid">
+      <div class="card side">
+        <div style="font-weight:700;padding:6px 7px 9px">Active Locations</div>
+        <div id="locations"></div>
+      </div>
+      <div class="card main">
+        <div class="head"><div><h2 id="title">All Active Locations</h2><div class="subtitle" id="subtitle"></div></div></div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>Category</th><th>Vendor</th><th>Status</th><th>Used by SP</th><th>Contact</th><th>Source / Notes</th></tr></thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SP_SITE="https://serviceprosgroup.sharepoint.com/sites/PropertyManagement";
+const SP_SCOPES=["https://serviceprosgroup.sharepoint.com/AllSites.Write"];
+const MSAL_CFG={auth:{clientId:"d456144c-56d3-469b-8847-4d68d5263562",authority:"https://login.microsoftonline.com/bab151e3-6d5a-4c92-aaaa-fdbb501a398f",redirectUri:window.location.origin+window.location.pathname},cache:{cacheLocation:"sessionStorage"}};
+let msalApp;
+let token=null, leases=[], assignments=[], vendors=[], notes=[], selectedLocation="";
+
+function setLoading(msg,isError=false){
+  const el=document.getElementById("loading");
+  if(!el)return;
+  el.style.display="";
+  el.innerHTML=isError?`<b>Could not load Vendor Manager.</b><div style="margin-top:8px;white-space:pre-wrap">${esc(msg)}</div>`:esc(msg);
+}
+
+window.addEventListener('load',function(){
+  if(typeof msal==="undefined"){
+    setLoading("Error: Could not load Microsoft authentication library. Check your internet connection and refresh.",true);
+    return;
+  }
+  msalApp=new msal.PublicClientApplication(MSAL_CFG);
+  msalApp.handleRedirectPromise().catch(e=>console.error(e));
+  reloadAll();
+});
+
+async function getToken(){
+  if(token)return token;
+  setLoading("Signing in to Microsoft…");
+  let accts=msalApp.getAllAccounts();
+  if(!accts.length){
+    await msalApp.loginPopup({scopes:SP_SCOPES});
+    accts=msalApp.getAllAccounts();
+  }
+  if(!accts.length)throw new Error("Microsoft sign-in completed but no account was returned.");
+  const r=await msalApp.acquireTokenSilent({scopes:SP_SCOPES,account:accts[0]});
+  token=r.accessToken;
+  return token;
+}
+
+async function sp(url){
+  const t=await getToken();
+  const r=await fetch(url,{headers:{Accept:"application/json;odata=nometadata",Authorization:"Bearer "+t}});
+  if(!r.ok){
+    let detail="";
+    try{detail=await r.text();}catch(_){ }
+    throw new Error(`SharePoint HTTP ${r.status}${detail?": "+detail:""}`);
+  }
+  return await r.json();
+}
+async function fieldMap(list){
+  const j=await sp(`${SP_SITE}/_api/web/lists/GetByTitle('${encodeURIComponent(list)}')/fields?$select=Title,InternalName&$top=300`);
+  const arr=j.value||(j.d&&j.d.results)||[];
+  const m={};arr.forEach(f=>m[f.Title]=f.InternalName);return m;
+}
+async function getList(list, wanted){
+  const m=await fieldMap(list);
+  const names=wanted.filter(x=>m[x]).map(x=>m[x]);
+  names.unshift("Id","Title");
+  const j=await sp(`${SP_SITE}/_api/web/lists/GetByTitle('${encodeURIComponent(list)}')/items?$select=${[...new Set(names)].join(",")}&$top=5000`);
+  const arr=j.value||(j.d&&j.d.results)||[];
+  return arr.map(x=>{const o={Id:x.Id,Title:x.Title};wanted.forEach(k=>o[k]=m[k]?x[m[k]]:null);return o;});
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function badge(status){
+  const s=(status||"").toLowerCase();
+  const c=s==="current"?"current":s==="recommended"?"recommended":s.includes("legacy")?"legacy":"historical";
+  return `<span class="tag ${c}">${esc(status||"")}</span>`;
+}
+function usedBadge(v){
+  return `<span class="tag ${v==="Yes"?"used":"notused"}">${v==="Yes"?"Used":"Not Yet Used"}</span>`;
+}
+function getLeaseLoc(x){return x["Location"]||x.Title||"";}
+function activeLeases(){return leases.filter(x=>(x["Lease Status"]||"Active")==="Active");}
+
+async function reloadAll(){
+  token=null;
+  setLoading("Connecting to SharePoint…");
+  document.getElementById("app").style.display="none";
+  try{
+    const [l,a,v,n,f]=await Promise.all([
+      getList("Lease Manager",["Location","Lease Status","LocNum","Address","City","State","Zip","Landlord","LandlordContact"]),
+      getList("SPIG Vendor Assignments",["Assignment ID","Vendor ID","Vendor Name","Location","Location Number","Category","Assignment Status","Relationship","Used by Service Pros","Source Type","Source Detail","Evidence Level","Assignment Notes","Needs Review","Contact Name","Phone","Email","Address","Service Scope","Last Used Date","NetSuite Evidence Count"]),
+      getList("SPIG Vendor Master",["Vendor ID","Vendor Status","Main Contact","Main Phone","Main Email","Website","Address","Coverage Type","Vendor Notes","Needs Review"]),
+      getList("SPIG Vendor Notes",["Note ID","Vendor ID","Vendor Name","Location","Category","Note Type","Note Text","Is Current","Source Type","Source Detail"]),
+      getList("Forklift Fleet",["Current Workroom","Status","Primary Service Vendor","Primary Service Vendor Phone"])
+    ]);
+
+    leases=l; assignments=a; vendors=v; notes=n;
+
+    // Lease Manager is KING: discard stored landlord current assignments and synthesize live landlord rows.
+    assignments=assignments.filter(x=>x.Category!=="Landlord" || x["Assignment Status"]!=="Current");
+    for(const x of activeLeases()){
+      if(x.Landlord) assignments.push({
+        Location:getLeaseLoc(x),Category:"Landlord","Vendor Name":x.Landlord,
+        "Assignment Status":"Current","Relationship":"Current Landlord","Used by Service Pros":"Yes",
+        "Source Type":"Lease Manager","Source Detail":"Live from Lease Manager (authoritative).",
+        "Contact Name":x.LandlordContact||"","Phone":"","Email":"","Assignment Notes":""
+      });
+    }
+
+    // Forklift Manager is KING: discard stored current forklift rows and synthesize current vendors live.
+    assignments=assignments.filter(x=>x.Category!=="Forklift" || x["Assignment Status"]!=="Current");
+    const seen=new Set();
+    for(const x of f){
+      if(!["Active","Down for Repair","Parked"].includes(x.Status))continue;
+      const loc=x["Current Workroom"], ven=x["Primary Service Vendor"];
+      if(!loc||!ven||seen.has(loc+"|"+ven))continue; seen.add(loc+"|"+ven);
+      assignments.push({Location:loc,Category:"Forklift","Vendor Name":ven,
+        "Assignment Status":"Current","Relationship":"Primary Service Vendor","Used by Service Pros":"Yes",
+        "Source Type":"Forklift Manager","Source Detail":"Live from Forklift Manager (authoritative).",
+        Phone:x["Primary Service Vendor Phone"]||"","Contact Name":"","Email":"","Assignment Notes":""});
+    }
+
+    populateFilters();renderLocations();renderKpis();render();
+    document.getElementById("loading").style.display="none";
+    document.getElementById("app").style.display="";
+  }catch(e){
+    setLoading(e&&e.message?e.message:String(e),true);
+    console.error(e);
+  }
+}
+function populateFilters(){
+  const cats=[...new Set(assignments.map(x=>x.Category).filter(Boolean))].sort();
+  document.getElementById("catFilter").innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join("");
+}
+function renderKpis(){
+  const active=activeLeases();
+  document.getElementById("kLoc").textContent=active.length;
+  document.getElementById("kVend").textContent=vendors.length;
+  document.getElementById("kCur").textContent=assignments.filter(x=>x["Assignment Status"]==="Current").length;
+  document.getElementById("kHist").textContent=assignments.filter(x=>["Historical","Legacy / Needs Verification"].includes(x["Assignment Status"])).length;
+  document.getElementById("kRec").textContent=assignments.filter(x=>x["Assignment Status"]==="Recommended").length;
+}
+function renderLocations(){
+  const locs=activeLeases().map(x=>({name:getLeaseLoc(x),num:x.LocNum,state:x.State})).sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById("locations").innerHTML=locs.map(x=>`<div class="loc ${selectedLocation===x.name?"on":""}" onclick='selectLocation(${JSON.stringify(x.name)})'>${esc(x.name)}<small>${esc(x.num||"")} ${x.state?"• "+esc(x.state):""}</small></div>`).join("");
+}
+function selectLocation(x){selectedLocation=x;renderLocations();render();}
+function render(){
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  const cat=document.getElementById("catFilter").value;
+  const st=document.getElementById("statusFilter").value;
+  let rows=assignments.filter(x=>{
+    if(selectedLocation&&x.Location!==selectedLocation)return false;
+    if(cat&&x.Category!==cat)return false;
+    if(st&&x["Assignment Status"]!==st)return false;
+    if(q){
+      const hay=[x.Location,x.Category,x["Vendor Name"],x.Phone,x.Email,x["Source Detail"],x["Assignment Notes"]].join(" ").toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    return true;
+  });
+  const order={"Current":0,"Recommended":1,"Legacy / Needs Verification":2,"Historical":3};
+  rows.sort((a,b)=>(a.Category||"").localeCompare(b.Category||"") || (order[a["Assignment Status"]]??9)-(order[b["Assignment Status"]]??9) || (a["Vendor Name"]||"").localeCompare(b["Vendor Name"]||""));
+  document.getElementById("title").textContent=selectedLocation||"All Active Locations";
+  const lease=activeLeases().find(x=>getLeaseLoc(x)===selectedLocation);
+  document.getElementById("subtitle").textContent=lease?`${lease.Address||""}, ${lease.City||""}, ${lease.State||""} ${lease.Zip||""}`:"Showing vendor assignments for active Lease Manager locations.";
+  document.getElementById("recBanner").style.display=rows.some(x=>x["Assignment Status"]==="Recommended")?"block":"none";
+  document.getElementById("rows").innerHTML=rows.length?rows.map(x=>{
+    const contact=[x["Contact Name"],x.Phone,x.Email].filter(Boolean).map(esc).join("<br>");
+    const src=`<b>${esc(x["Source Type"]||"")}</b>${x["Source Detail"]?`<div class="source">${esc(x["Source Detail"])}</div>`:""}${x["Assignment Notes"]?`<div class="note">${esc(x["Assignment Notes"])}</div>`:""}`;
+    return `<tr><td><b>${esc(x.Category||"")}</b></td><td><b>${esc(x["Vendor Name"]||"")}</b>${x.Relationship?`<div class="source">${esc(x.Relationship)}</div>`:""}</td><td>${badge(x["Assignment Status"])}</td><td>${usedBadge(x["Used by Service Pros"]||"Unknown")}</td><td>${contact||'<span class="source">No contact loaded</span>'}</td><td>${src}</td></tr>`;
+  }).join(""):`<tr><td colspan="6" class="empty">No matching vendor records.</td></tr>`;
+}
+</script>
+</body>
+</html>
