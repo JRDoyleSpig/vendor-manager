@@ -15,7 +15,7 @@
 .kpis{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:12px;margin-bottom:14px}.card{background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 1px 3px rgba(16,24,40,.08)}
 .kpi{padding:14px}.kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700}.kpi .value{font-size:27px;font-weight:700;margin-top:5px}.kpi .note{color:var(--muted);font-size:12px;margin-top:4px}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px;margin-bottom:12px}.input,.select{border:1px solid #cfd8e1;background:#fff;border-radius:7px;padding:8px 9px;min-height:36px}.input{min-width:280px}.grow{flex:1}
-.grid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:14px}.side{padding:10px;max-height:calc(100vh - 185px);overflow:auto;position:sticky;top:76px}.loc{padding:9px;border-radius:7px;cursor:pointer;margin:2px 0}.loc:hover{background:#f0f5fa}.loc.on{background:#e7f0f8;color:#123f69;font-weight:700}.loc small{display:block;color:var(--muted);font-weight:400;margin-top:2px}
+.grid{display:grid;grid-template-columns:260px minmax(0,1fr);gap:14px}.side{padding:10px;max-height:calc(100vh - 260px);overflow:auto;position:sticky;top:76px}.loc{padding:9px;border-radius:7px;cursor:pointer;margin:2px 0;border:1px solid transparent}.loc:hover{background:#f0f5fa}.loc.on{background:#e7f0f8;color:#123f69;font-weight:700;border-color:#bfd4e7}.loc small{display:block;color:var(--muted);font-weight:400;margin-top:2px}.location-search{width:100%;border:1px solid #cfd8e1;border-radius:7px;padding:7px 8px;margin:4px 0 8px}.category-strip{display:flex;gap:7px;overflow-x:auto;padding:10px 12px;margin-bottom:12px;scrollbar-width:thin}.cat-chip{border:1px solid #d7e0e8;background:#fff;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer;color:#415261}.cat-chip:hover{background:#f0f5fa}.cat-chip.on{background:#17365d;color:#fff;border-color:#17365d}.side-head{display:flex;align-items:center;justify-content:space-between;padding:6px 7px 4px}.side-count{font-size:11px;color:var(--muted);font-weight:600}.location-cell{font-weight:700;color:#17365d}.category-name{font-weight:700}
 .main{padding:14px}.head{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}.head h2{margin:0;font-size:22px}.subtitle{color:var(--muted);margin-top:3px}
 .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px}table{width:100%;border-collapse:collapse;background:#fff}th{background:#f3f6f9;color:#5f6f7c;text-transform:uppercase;letter-spacing:.04em;font-size:10px;text-align:left;padding:9px;position:sticky;top:0;white-space:nowrap}td{padding:9px;border-top:1px solid #edf1f4;vertical-align:top}tr:hover td{background:#fafcfd}
 .tag{display:inline-block;border-radius:999px;padding:3px 7px;font-size:11px;font-weight:700;white-space:nowrap}.current{background:#eaf4e6;color:var(--green)}.historical{background:#edf0f3;color:#58636e}.legacy{background:#fff4d6;color:var(--amber)}.recommended{background:#f0eafa;color:var(--purple)}.used{background:#e8f1fb;color:#245f92}.notused{background:#feeceb;color:var(--red)}
@@ -46,7 +46,7 @@
 
     <div class="card toolbar">
       <input class="input" id="search" placeholder="Search vendor, location, category, phone…" oninput="render()">
-      <select class="select" id="catFilter" onchange="render()"><option value="">All categories</option></select>
+      <select class="select" id="catFilter" onchange="render();renderCategoryStrip([...this.options].slice(1).map(o=>o.value))"><option value="">All categories</option></select>
       <select class="select" id="statusFilter" onchange="render()">
         <option value="">All statuses</option><option>Current</option><option>Recommended</option>
         <option>Historical</option><option>Legacy / Needs Verification</option>
@@ -57,16 +57,19 @@
 
     <div id="recBanner" class="banner"><b>Recommended vendor shown.</b> These records are researched options and are explicitly marked <b>Not Yet Used by Service Pros</b>.</div>
 
+    <div class="card category-strip" id="categoryStrip"></div>
+
     <div class="grid">
       <div class="card side">
-        <div style="font-weight:700;padding:6px 7px 9px">Active Locations</div>
+        <div class="side-head"><div style="font-weight:700">Active Locations</div><div class="side-count" id="locationCount"></div></div>
+        <input id="locationSearch" class="location-search" placeholder="Find location..." oninput="renderLocations()">
         <div id="locations"></div>
       </div>
       <div class="card main">
         <div class="head"><div><h2 id="title">All Active Locations</h2><div class="subtitle" id="subtitle"></div></div></div>
         <div class="tablewrap">
           <table>
-            <thead><tr><th>Category</th><th>Vendor</th><th>Status</th><th>Used by SP</th><th>Contact</th><th>Source / Notes</th></tr></thead>
+            <thead><tr><th>Location</th><th>Category</th><th>Vendor</th><th>Status</th><th>Used by SP</th><th>Contact</th><th>Source / Notes</th></tr></thead>
             <tbody id="rows"></tbody>
           </table>
         </div>
@@ -80,7 +83,7 @@ const SP_SITE="https://serviceprosgroup.sharepoint.com/sites/PropertyManagement"
 const SP_SCOPES=["https://serviceprosgroup.sharepoint.com/AllSites.Write"];
 const MSAL_CFG={auth:{clientId:"d456144c-56d3-469b-8847-4d68d5263562",authority:"https://login.microsoftonline.com/bab151e3-6d5a-4c92-aaaa-fdbb501a398f",redirectUri:window.location.origin+window.location.pathname},cache:{cacheLocation:"sessionStorage"}};
 let msalApp;
-let token=null, leases=[], assignments=[], vendors=[], notes=[], selectedLocation="";
+let token=null, leases=[], assignments=[], vendors=[], notes=[], categories=[], selectedLocation="";
 
 function setLoading(msg,isError=false){
   const el=document.getElementById("loading");
@@ -146,22 +149,39 @@ function usedBadge(v){
   return `<span class="tag ${v==="Yes"?"used":"notused"}">${v==="Yes"?"Used":"Not Yet Used"}</span>`;
 }
 function getLeaseLoc(x){return x["Location"]||x.Title||"";}
-function activeLeases(){return leases.filter(x=>(x["Lease Status"]||"Active")==="Active");}
+function activeLeases(){
+  return leases.filter(x=>String(x["Status"]||x["Lease Status"]||"").trim().toLowerCase()==="active");
+}
+function locationKey(x){
+  const n=String(x.LocNum||"").trim().toLowerCase();
+  if(n)return "#"+n;
+  return String(getLeaseLoc(x)||"").trim().toLowerCase();
+}
+function uniqueActiveLocations(){
+  const map=new Map();
+  for(const x of activeLeases()){
+    const k=locationKey(x); if(!k)continue;
+    if(!map.has(k))map.set(k,x);
+  }
+  return [...map.values()];
+}
+function activeLocationNames(){return new Set(uniqueActiveLocations().map(x=>String(getLeaseLoc(x)||"").trim()).filter(Boolean));}
 
 async function reloadAll(){
   token=null;
   setLoading("Connecting to SharePoint…");
   document.getElementById("app").style.display="none";
   try{
-    const [l,a,v,n,f]=await Promise.all([
-      getList("Lease Manager",["Location","Lease Status","LocNum","Address","City","State","Zip","Landlord","LandlordContact"]),
+    const [l,a,v,n,c,f]=await Promise.all([
+      getList("Lease Manager",["Location","Status","LocNum","Address","City","State","Zip","Landlord","LandlordContact"]),
       getList("SPIG Vendor Assignments",["Assignment ID","Vendor ID","Vendor Name","Location","Location Number","Category","Assignment Status","Relationship","Used by Service Pros","Source Type","Source Detail","Evidence Level","Assignment Notes","Needs Review","Contact Name","Phone","Email","Address","Service Scope","Last Used Date","NetSuite Evidence Count"]),
       getList("SPIG Vendor Master",["Vendor ID","Vendor Status","Main Contact","Main Phone","Main Email","Website","Address","Coverage Type","Vendor Notes","Needs Review"]),
       getList("SPIG Vendor Notes",["Note ID","Vendor ID","Vendor Name","Location","Category","Note Type","Note Text","Is Current","Source Type","Source Detail"]),
+      getList("SPIG Vendor Categories",[]),
       getList("Forklift Fleet",["Current Workroom","Status","Primary Service Vendor","Primary Service Vendor Phone"])
     ]);
 
-    leases=l; assignments=a; vendors=v; notes=n;
+    leases=l; assignments=a; vendors=v; notes=n; categories=c;
 
     // Lease Manager is KING: discard stored landlord current assignments and synthesize live landlord rows.
     assignments=assignments.filter(x=>x.Category!=="Landlord" || x["Assignment Status"]!=="Current");
@@ -196,11 +216,25 @@ async function reloadAll(){
   }
 }
 function populateFilters(){
-  const cats=[...new Set(assignments.map(x=>x.Category).filter(Boolean))].sort();
-  document.getElementById("catFilter").innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join("");
+  const cats=(categories.length?categories.map(x=>x.Title):assignments.map(x=>x.Category)).filter(Boolean);
+  const unique=[...new Set(cats)].sort((a,b)=>a.localeCompare(b));
+  document.getElementById("catFilter").innerHTML='<option value="">All categories ('+unique.length+')</option>'+unique.map(c=>`<option>${esc(c)}</option>`).join("");
+  renderCategoryStrip(unique);
 }
+function renderCategoryStrip(cats){
+  const activeNames=activeLocationNames();
+  const counts={};
+  for(const a of assignments){
+    if(a.Location && !activeNames.has(String(a.Location).trim()))continue;
+    if(a.Category)counts[a.Category]=(counts[a.Category]||0)+1;
+  }
+  const current=document.getElementById("catFilter").value;
+  document.getElementById("categoryStrip").innerHTML=`<button class="cat-chip ${current?'':'on'}" onclick="setCategory('')">All Categories <span>(${cats.length})</span></button>`+
+    cats.map(c=>`<button class="cat-chip ${current===c?'on':''}" onclick='setCategory(${JSON.stringify(c)})'>${esc(c)} <span>(${counts[c]||0})</span></button>`).join("");
+}
+function setCategory(c){document.getElementById("catFilter").value=c;render();renderCategoryStrip([...document.getElementById("catFilter").options].slice(1).map(o=>o.value));}
 function renderKpis(){
-  const active=activeLeases();
+  const active=uniqueActiveLocations();
   document.getElementById("kLoc").textContent=active.length;
   document.getElementById("kVend").textContent=vendors.length;
   document.getElementById("kCur").textContent=assignments.filter(x=>x["Assignment Status"]==="Current").length;
@@ -208,15 +242,20 @@ function renderKpis(){
   document.getElementById("kRec").textContent=assignments.filter(x=>x["Assignment Status"]==="Recommended").length;
 }
 function renderLocations(){
-  const locs=activeLeases().map(x=>({name:getLeaseLoc(x),num:x.LocNum,state:x.State})).sort((a,b)=>a.name.localeCompare(b.name));
-  document.getElementById("locations").innerHTML=locs.map(x=>`<div class="loc ${selectedLocation===x.name?"on":""}" onclick='selectLocation(${JSON.stringify(x.name)})'>${esc(x.name)}<small>${esc(x.num||"")} ${x.state?"• "+esc(x.state):""}</small></div>`).join("");
+  const q=(document.getElementById("locationSearch")?.value||"").trim().toLowerCase();
+  let locs=uniqueActiveLocations().map(x=>({name:getLeaseLoc(x),num:x.LocNum,state:x.State})).sort((a,b)=>a.name.localeCompare(b.name));
+  if(q)locs=locs.filter(x=>[x.name,x.num,x.state].join(" ").toLowerCase().includes(q));
+  document.getElementById("locationCount").textContent=uniqueActiveLocations().length+" locations";
+  document.getElementById("locations").innerHTML=locs.map(x=>`<div class="loc ${selectedLocation===x.name?"on":""}" onclick='selectLocation(${JSON.stringify(x.name)})'>${esc(x.name)}<small>${esc(x.num||"")} ${x.state?"• "+esc(x.state):""}</small></div>`).join("") || '<div class="empty" style="padding:16px">No locations found.</div>';
 }
 function selectLocation(x){selectedLocation=x;renderLocations();render();}
 function render(){
   const q=document.getElementById("search").value.trim().toLowerCase();
   const cat=document.getElementById("catFilter").value;
   const st=document.getElementById("statusFilter").value;
+  const activeNames=activeLocationNames();
   let rows=assignments.filter(x=>{
+    if(x.Location && !activeNames.has(String(x.Location).trim()))return false;
     if(selectedLocation&&x.Location!==selectedLocation)return false;
     if(cat&&x.Category!==cat)return false;
     if(st&&x["Assignment Status"]!==st)return false;
@@ -235,8 +274,8 @@ function render(){
   document.getElementById("rows").innerHTML=rows.length?rows.map(x=>{
     const contact=[x["Contact Name"],x.Phone,x.Email].filter(Boolean).map(esc).join("<br>");
     const src=`<b>${esc(x["Source Type"]||"")}</b>${x["Source Detail"]?`<div class="source">${esc(x["Source Detail"])}</div>`:""}${x["Assignment Notes"]?`<div class="note">${esc(x["Assignment Notes"])}</div>`:""}`;
-    return `<tr><td><b>${esc(x.Category||"")}</b></td><td><b>${esc(x["Vendor Name"]||"")}</b>${x.Relationship?`<div class="source">${esc(x.Relationship)}</div>`:""}</td><td>${badge(x["Assignment Status"])}</td><td>${usedBadge(x["Used by Service Pros"]||"Unknown")}</td><td>${contact||'<span class="source">No contact loaded</span>'}</td><td>${src}</td></tr>`;
-  }).join(""):`<tr><td colspan="6" class="empty">No matching vendor records.</td></tr>`;
+    return `<tr><td><span class="location-cell">${esc(x.Location||"—")}</span></td><td><span class="category-name">${esc(x.Category||"")}</span></td><td><b>${esc(x["Vendor Name"]||"")}</b>${x.Relationship?`<div class="source">${esc(x.Relationship)}</div>`:""}</td><td>${badge(x["Assignment Status"])}</td><td>${usedBadge(x["Used by Service Pros"]||"Unknown")}</td><td>${contact||'<span class="source">No contact loaded</span>'}</td><td>${src}</td></tr>`;
+  }).join(""):`<tr><td colspan="7" class="empty">No matching vendor records.</td></tr>`;
 }
 </script>
 </body>
